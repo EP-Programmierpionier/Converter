@@ -299,6 +299,10 @@ def ersetze_content_controls(doc_path, werte, output_path):
                 if tag_el is not None:
                     key = tag_el.get(qn('w:val'))
 
+                    # Anzahl_Maßnahmen_X immer überspringen – werden von entferne_nicht_passende_massnahmen_sdt behandelt
+                    if key and key.startswith('Anzahl_Maßnahmen_'):
+                        continue
+
                     # Prüfen ob Wert fehlt oder leer ist
                     if key not in werte or not str(werte[key]).strip():
                         fehlende_tags.append(key)

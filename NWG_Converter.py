@@ -17,16 +17,15 @@ Version: Clean (70% weniger Code)
 """
 
 import os
+import math
 import logging
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
 from docx import Document
-from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from PIL import Image, ImageTk
 from tkinterdnd2 import TkinterDnD, DND_FILES
-import json
 import sys
 import getpass
 from pathlib import Path
@@ -58,20 +57,10 @@ def get_resource_path(relative_path):
         return os.path.join(os.path.dirname(__file__), "Vorlagen", relative_path)
 
 # Pfade automatisch bestimmen
-if getattr(sys, 'frozen', False):
-    # .exe Modus
-    BASE_DIR = os.path.dirname(sys.executable)
-    BERATER_LISTE = str(VORLAGEN_PATH / "Energieberaterliste_T2.xlsx")
-    LOGO_PATH = get_resource_path("logo.jpg") 
-    STANDARD_WORD = str(VORLAGEN_PATH / "NWG-Bericht_Converter_Vorlage_V1.0.docx")
-    ICON_PATH = get_resource_path("Converter_logo.ico")
-else:
-    # Entwicklungsmodus
-    BASE_DIR = str(Path(__file__).parent.parent)
-    BERATER_LISTE = str(Path(__file__).parent / "Vorlagen" / "Energieberaterliste_T2.xlsx")
-    LOGO_PATH = str(Path(__file__).parent / "Vorlagen" / "logo.jpg")
-    STANDARD_WORD = str(Path(__file__).parent / "Vorlagen" / "NWG-Bericht_Converter_Vorlage_V1.0.docx")
-    ICON_PATH = str(Path(__file__).parent / "Vorlagen" / "Converter_logo.ico")
+BASE_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else str(Path(__file__).parent.parent)
+BERATER_LISTE = str(VORLAGEN_PATH / "Energieberaterliste_T2.xlsx")
+LOGO_PATH = get_resource_path("logo.jpg")
+ICON_PATH = get_resource_path("Converter_logo.ico")
 
 # Logging-Setup
 logs_dir = os.path.join(BASE_DIR, "Logs")
@@ -130,35 +119,17 @@ class ModernButton(tk.Canvas):
     
     def create_rounded_rect(self, x1, y1, x2, y2, radius=10, **kwargs):
         points = []
-        steps = 8  # Mehr Steps für glattere Rundungen
-        
-        # Oben links
-        for i in range(steps + 1):
-            angle = 3.14159 + i * 1.57079 / steps  # 180° bis 270°
-            x = x1 + radius + radius * (angle - 3.14159) / 1.57079
-            y = y1 + radius - radius * (2.57079 - angle) / 1.57079
-            points.extend([x1 + radius - radius * (1 - (angle - 3.14159) / 1.57079),
-                          y1 + radius - radius * (1 - (angle - 3.14159) / 1.57079)])
-        
-        # Vereinfachte echte Rundung
-        import math
-        points = []
-        
-        # Ecken definieren
         corners = [
             (x1 + radius, y1 + radius, 3.14159, 4.71238),  # Oben links
-            (x2 - radius, y1 + radius, 4.71238, 6.28318),  # Oben rechts  
+            (x2 - radius, y1 + radius, 4.71238, 6.28318),  # Oben rechts
             (x2 - radius, y2 - radius, 0, 1.57079),        # Unten rechts
             (x1 + radius, y2 - radius, 1.57079, 3.14159)   # Unten links
         ]
-        
         for cx, cy, start_angle, end_angle in corners:
             for i in range(9):  # 8 Segmente pro Ecke für Glätte
                 angle = start_angle + (end_angle - start_angle) * i / 8
-                x = cx + radius * math.cos(angle)
-                y = cy + radius * math.sin(angle)
-                points.extend([x, y])
-        
+                points.extend([cx + radius * math.cos(angle),
+                                cy + radius * math.sin(angle)])
         return self.create_polygon(points, smooth=True, **kwargs)
 
 # ========== Funktionen ==========
@@ -175,6 +146,12 @@ def lade_beraterliste():
     except Exception as e:
         logging.error(f"Fehler beim Laden der Beraterliste: {e}")
         berater_df = pd.DataFrame(columns=["Berater_Name", "Berater_Beraternummer"])
+
+def lade_vorlagen_liste():
+    """Gibt alle .docx Dateien aus dem Vorlagen-Ordner zurück"""
+    if not VORLAGEN_PATH.exists():
+        return []
+    return sorted([f.name for f in VORLAGEN_PATH.glob("*.docx")])
 
 def on_berater_auswahl(event):
     """Event-Handler für Berater-Auswahl"""
@@ -201,6 +178,20 @@ def on_berater_auswahl(event):
             entry_name.config(state='readonly')
             entry_nr.config(state='readonly')
 
+def aktualisiere_create_button():
+    """Aktiviert/Deaktiviert den Erstellen-Button je nach Auswahl"""
+    state = "normal" if excel_datei and bericht_datei else "disabled"
+    btn_create.config(state=state)
+
+def on_vorlage_auswahl(event):
+    """Event-Handler für Word-Vorlage-Auswahl aus Dropdown"""
+    global bericht_datei
+    name = cb_vorlage.get()
+    if name:
+        bericht_datei = str(VORLAGEN_PATH / name)
+        logging.info(f"Word-Vorlage gewählt: {name}")
+    aktualisiere_create_button()
+
 # ========== Datei-Handling ==========
 def lade_excel():
     """Excel-Datei auswählen"""
@@ -212,11 +203,11 @@ def lade_excel():
     if datei:
         excel_datei = datei
         lbl_excel.config(text=os.path.basename(datei))
-        btn_create.config(state="normal" if excel_datei and bericht_datei else "disabled")
+        aktualisiere_create_button()
         logging.info(f"Excel-Datei ausgewählt: {os.path.basename(datei)}")
 
 def import_word():
-    """Word-Vorlage auswählen"""
+    """Andere Word-Vorlage auswählen (außerhalb des Vorlagen-Ordners)"""
     global bericht_datei
     datei = filedialog.askopenfilename(
         title="Word-Vorlage auswählen",
@@ -224,15 +215,17 @@ def import_word():
     )
     if datei:
         bericht_datei = datei
-        messagebox.showinfo("Word-Vorlage", f"Word-Datei ausgewählt:\n{os.path.basename(datei)}")
-        btn_create.config(state="normal" if excel_datei and bericht_datei else "disabled")
+        name = os.path.basename(datei)
+        cb_vorlage.set(name)
+        logging.info(f"Eigene Word-Vorlage gewählt: {name}")
+    aktualisiere_create_button()
 
 def handle_drop(event):
     """Drag & Drop Event"""
     global excel_datei
     excel_datei = event.data.strip('{}')
     lbl_excel.config(text=os.path.basename(excel_datei))
-    btn_create.config(state="normal" if excel_datei and bericht_datei else "disabled")
+    aktualisiere_create_button()
 
 def ersetze_content_controls(doc_path, werte, output_path):
     """Content Controls in Word ersetzen mit Tag-Validation"""
@@ -352,12 +345,13 @@ def show_easter_egg(event=None):
 # ========== GUI Aufbau ==========
 logging.info("NWG-Bericht Converter gestartet - Clean Version")
 lade_beraterliste()
-bericht_datei = STANDARD_WORD if os.path.exists(STANDARD_WORD) else None
+vorlagen_liste = lade_vorlagen_liste()
+bericht_datei = str(VORLAGEN_PATH / vorlagen_liste[0]) if vorlagen_liste else None
 
 # Hauptfenster
 root = TkinterDnD.Tk()
 root.title("NWG-Bericht Converter")
-root.geometry("1100x500")
+root.geometry("1100x560")
 root.resizable(False, False)
 root.configure(bg=COLORS['background'])
 
@@ -421,44 +415,56 @@ btn_create = ModernButton(frm_center, "🚀 Bericht erstellen", bericht_erstelle
 btn_create.pack(pady=20)
 btn_create.config(state="disabled")
 
-# Rechte Spalte: Excel Import
-frm_right = tk.LabelFrame(main, text="Import", bg=COLORS['background'], 
-                         fg=COLORS['text'], font=('Arial',12,'bold'), padx=20, pady=20)
+# Rechte Spalte: Import
+frm_right = tk.LabelFrame(main, text="Import", bg=COLORS['background'],
+                         fg=COLORS['text'], font=('Arial',12,'bold'), padx=15, pady=10)
 frm_right.grid(row=0, column=2, sticky='nsew', padx=10, pady=10)
 
-# Drop-Zone für Excel-Dateien
-drop_frame = tk.Frame(frm_right, bg=COLORS['drop_bg'], height=120)
-drop_frame.pack(fill='x', pady=(0,10))
+# --- Excel-Bereich ---
+tk.Label(frm_right, text="Pfadfinder:", bg=COLORS['background'],
+         font=FONTS['label']).pack(anchor='w', pady=(4,0))
+
+drop_frame = tk.Frame(frm_right, bg=COLORS['drop_bg'], height=90)
+drop_frame.pack(fill='x', pady=(4,6))
 drop_frame.pack_propagate(False)
 
-drop_canvas = tk.Canvas(drop_frame, bg=COLORS['drop_bg'], highlightthickness=0, height=120)
+drop_canvas = tk.Canvas(drop_frame, bg=COLORS['drop_bg'], highlightthickness=0, height=90)
 drop_canvas.pack(fill='both', expand=True)
 
 def draw_drop_zone(event):
     drop_canvas.delete("all")
     w, h = event.width, event.height
     drop_canvas.create_rectangle(5, 5, w-5, h-5, dash=(5,3), outline="#34C759", width=2)
-    drop_canvas.create_text(w//2, h//2, text="Pfadfinder hier ablegen", 
+    drop_canvas.create_text(w//2, h//2, text="Pfadfinder hier ablegen",
                            fill="#34C759", font=FONTS['label'])
 
 drop_canvas.bind("<Configure>", draw_drop_zone)
 drop_canvas.drop_target_register(DND_FILES)
 drop_canvas.dnd_bind('<<Drop>>', handle_drop)
 
-# Datei-Info
-lbl_excel = tk.Label(frm_right, text="Keine Datei gewählt", font=FONTS['label'], 
+lbl_excel = tk.Label(frm_right, text="Keine Datei gewählt", font=FONTS['label'],
                      bg=COLORS['background'], fg=COLORS['text'])
-lbl_excel.pack(fill='x', pady=(0,10))
+lbl_excel.pack(fill='x', pady=(2,6))
 
-# Buttons
-ModernButton(frm_right, "➕ Pfadfinder auswählen", lade_excel, width=180, height=40, 
-           bg="#34C759").pack(pady=10)
+ModernButton(frm_right, "➕ Pfadfinder auswählen", lade_excel, width=180, height=38,
+           bg="#34C759").pack(pady=(0,14))
 
-ModernButton(frm_right, "Import Word-Bericht", import_word, width=180, height=40, 
-           bg="#007AFF", hover_bg="#0051D4").pack(pady=10)
+# --- Trennlinie ---
+ttk.Separator(frm_right, orient='horizontal').pack(fill='x', pady=(0,14))
 
-# Start
-if excel_datei and bericht_datei:
-    btn_create.config(state="normal")
+# --- Word-Vorlage-Bereich ---
+tk.Label(frm_right, text="Word-Vorlage:", bg=COLORS['background'],
+         font=FONTS['label']).pack(anchor='w')
+cb_vorlage = ttk.Combobox(frm_right, values=vorlagen_liste, state='readonly', width=24)
+cb_vorlage.pack(fill='x', pady=(4,8))
+cb_vorlage.bind('<<ComboboxSelected>>', on_vorlage_auswahl)
+
+if vorlagen_liste:
+    cb_vorlage.set(vorlagen_liste[0])
+
+tk.Label(frm_right, text="oder", bg=COLORS['background'],
+         fg=COLORS['text'], font=FONTS['label']).pack(pady=(0,4))
+ModernButton(frm_right, "Import Word-Bericht", import_word, width=180, height=38,
+           bg="#007AFF", hover_bg="#0051D4").pack()
 
 root.mainloop()

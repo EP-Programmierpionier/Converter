@@ -98,6 +98,7 @@ FONTS = {
 excel_datei = None
 berater_df = pd.DataFrame()
 werte_dict = {}
+WORD_NS = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
 
 # ========== Moderne Buttons ==========
 class ModernButton(tk.Canvas):
@@ -232,26 +233,79 @@ def handle_drop(event):
     lbl_excel.config(text=os.path.basename(excel_datei))
     aktualisiere_create_button()
 
+def entferne_nicht_passende_massnahmen_sdt(doc, werte):
+    """
+    Verarbeitet alle 'Anzahl_Maßnahmen_X' Content Controls:
+    - Nicht passende (falsche Zahl) → vollständig gelöscht
+    - Passender (richtige Zahl)     → Wrapper entfernt, Inhalt bleibt als normaler Text
+    """
+    anzahl_wert = werte.get('Anzahl_Maßnahmen', '')
+    try:
+        anzahl = int(str(anzahl_wert).strip())
+    except (ValueError, TypeError):
+        logging.warning(f"Anzahl_Maßnahmen hat ungültigen Wert: '{anzahl_wert}' – keine SDTs verändert")
+        return
+
+    zu_loeschen = []
+    zu_unwrappen = []
+
+    for sdt in doc.element.iter():
+        if sdt.tag.endswith('sdt'):
+            tag_el = sdt.find('.//w:tag', namespaces=WORD_NS)
+            if tag_el is not None:
+                key = tag_el.get(qn('w:val')) or ''
+                if key.startswith('Anzahl_Maßnahmen_'):
+                    suffix = key[len('Anzahl_Maßnahmen_'):]
+                    try:
+                        if int(suffix) == anzahl:
+                            zu_unwrappen.append(sdt)
+                        else:
+                            zu_loeschen.append(sdt)
+                    except ValueError:
+                        pass
+
+    # Nicht passende vollständig löschen
+    for sdt in zu_loeschen:
+        parent = sdt.getparent()
+        if parent is not None:
+            parent.remove(sdt)
+
+    # Passenden unwrappen: Wrapper weg, Inhalt bleibt
+    for sdt in zu_unwrappen:
+        parent = sdt.getparent()
+        if parent is not None:
+            idx = list(parent).index(sdt)
+            content = sdt.find('w:sdtContent', namespaces=WORD_NS)
+            if content is not None:
+                for i, child in enumerate(list(content)):
+                    parent.insert(idx + i, child)
+            parent.remove(sdt)
+
+    logging.info(f"Anzahl_Maßnahmen={anzahl}: {len(zu_loeschen)} gelöscht, {len(zu_unwrappen)} unwrapped")
+
+
 def ersetze_content_controls(doc_path, werte, output_path):
     """Content Controls in Word ersetzen mit Tag-Validation"""
     try:
         doc = Document(doc_path)
-        ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
         fehlende_tags = []
+
+        # Nicht passende Anzahl_Maßnahmen_X Controls vor der Ersetzung löschen
+        entferne_nicht_passende_massnahmen_sdt(doc, werte)
         
         for sdt in doc.element.iter():
             if sdt.tag.endswith('sdt'):
-                tag_el = sdt.find('.//w:tag', namespaces=ns)
+                tag_el = sdt.find('.//w:tag', namespaces=WORD_NS)
                 if tag_el is not None:
                     key = tag_el.get(qn('w:val'))
-                    
+
                     # Prüfen ob Wert fehlt oder leer ist
                     if key not in werte or not str(werte[key]).strip():
                         fehlende_tags.append(key)
                     
-                    content = sdt.find('.//w:sdtContent', namespaces=ns)
+                    content = sdt.find('.//w:sdtContent', namespaces=WORD_NS)
                     if content is not None:
-                        texts = content.findall('.//w:t', namespaces=ns)
+                        texts = content.findall('.//w:t', namespaces=WORD_NS)
                         if texts:
                             texts[0].text = str(werte.get(key, ""))
                             for text_node in texts[1:]:

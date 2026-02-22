@@ -313,10 +313,15 @@ def bericht_erstellen():
         werte_dict.update(dict(zip(df['Tags'], df['Werte'])))
         
         # Speicherpfad
+        adresse = werte_dict.get('Gebäude_Adresse', '')
+        adresse_clean = "".join(c if c not in r'\/:*?"<>|' else "_" for c in adresse).strip()
+        default_name = f"Sanierungsfahrplan_{adresse_clean}" if adresse_clean else "Sanierungsfahrplan"
+
         save_path = filedialog.asksaveasfilename(
             defaultextension='.docx',
             filetypes=[('Word Dokumente', '*.docx')],
-            title="Bericht speichern unter"
+            title="Bericht speichern unter",
+            initialfile=default_name
         )
         
         if save_path and ersetze_content_controls(bericht_datei, werte_dict, save_path):

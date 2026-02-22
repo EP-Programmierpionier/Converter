@@ -317,53 +317,56 @@ def ersetze_content_controls(doc_path, werte, output_path):
                                 text_node.text = ""
         
         doc.save(output_path)
-        
-        # Zeige fehlende Tags an
-        if fehlende_tags:
-            zeige_fehlende_tags(fehlende_tags)
-        
-        return True
+        return True, fehlende_tags
     except Exception as e:
         messagebox.showerror("Fehler beim Ersetzen", str(e))
-        return False
+        return False, []
 
-def zeige_fehlende_tags(fehlende_tags):
-    """Zeigt Fenster mit nicht ersetzten Tags"""
+def zeige_ergebnis_fenster(save_path, fehlende_tags):
+    """Kombiniertes Ergebnis-Fenster: Erfolg + evtl. fehlende Tags"""
     tags = sorted(set(tag for tag in fehlende_tags if tag))
-    if not tags:
-        return
-        
-    fehlende_window = tk.Toplevel(root)
-    fehlende_window.title("Nicht gefüllte Platzhalter im Bericht")
-    fehlende_window.geometry("450x350")
-    fehlende_window.configure(bg=COLORS['background'])
-    fehlende_window.attributes('-topmost', True)
-    fehlende_window.lift()
-    fehlende_window.focus_force()
-    fehlende_window.grab_set()  # Modal: blockiert das Hauptfenster bis geschlossen
-    
-    tk.Label(fehlende_window, text="Nicht gefüllte Platzhalter im Bericht",
-             bg=COLORS['background'], font=("Arial", 14, "bold")).pack(pady=(10,5))
-    tk.Label(fehlende_window,
-             text="Bitte prüfe diese Tags in deiner Vorlage oder in der Excel-Datei.",
-             bg=COLORS['background'], font=("Arial", 10), wraplength=400, justify="center").pack(pady=(0,10))
-    
-    frame = tk.Frame(fehlende_window, bg=COLORS['background'])
-    frame.pack(fill="both", expand=True, padx=10, pady=5)
-    
-    text_widget = tk.Text(frame, wrap="none", bg="#ffffff", font=FONTS['label'])
-    vsb = ttk.Scrollbar(frame, orient="vertical", command=text_widget.yview)
-    text_widget.configure(yscrollcommand=vsb.set)
-    vsb.pack(side="right", fill="y")
-    text_widget.pack(side="left", fill="both", expand=True)
-    
-    text_widget.insert("1.0", "\n".join(tags))
-    text_widget.config(state="disabled")
-    
-    tk.Button(fehlende_window, text="Schließen", command=fehlende_window.destroy,
-              bg=COLORS['primary'], fg="white", font=FONTS['button']).pack(pady=10)
-    
-    logging.warning(f"Nicht gefüllte Tags: {tags}")
+
+    win = tk.Toplevel(root)
+    win.title("Bericht erstellt")
+    win.configure(bg=COLORS['background'])
+    win.attributes('-topmost', True)
+    win.lift()
+    win.focus_force()
+    win.grab_set()
+
+    # Erfolgs-Header
+    tk.Label(win, text="✅ Bericht erfolgreich gespeichert",
+             bg=COLORS['background'], font=("Arial", 13, "bold"),
+             fg=COLORS['primary']).pack(pady=(15, 2), padx=20)
+    tk.Label(win, text=save_path, bg=COLORS['background'],
+             font=("Arial", 9), fg=COLORS['text'], wraplength=400).pack(padx=20, pady=(0, 10))
+
+    if tags:
+        ttk.Separator(win, orient='horizontal').pack(fill='x', padx=20, pady=(0, 8))
+        tk.Label(win, text="⚠ Nicht gefüllte Platzhalter",
+                 bg=COLORS['background'], font=("Arial", 12, "bold")).pack(pady=(0, 3))
+        tk.Label(win, text="Bitte prüfe diese Tags in der Vorlage oder Excel-Datei.",
+                 bg=COLORS['background'], font=("Arial", 10),
+                 wraplength=400, justify="center").pack(pady=(0, 8))
+
+        frame = tk.Frame(win, bg=COLORS['background'])
+        frame.pack(fill="both", expand=True, padx=20, pady=(0, 8))
+
+        text_widget = tk.Text(frame, wrap="none", bg="#ffffff", font=FONTS['label'], height=8)
+        vsb = ttk.Scrollbar(frame, orient="vertical", command=text_widget.yview)
+        text_widget.configure(yscrollcommand=vsb.set)
+        vsb.pack(side="right", fill="y")
+        text_widget.pack(side="left", fill="both", expand=True)
+
+        text_widget.insert("1.0", "\n".join(tags))
+        text_widget.config(state="disabled")
+        win.geometry("450x420")
+        logging.warning(f"Nicht gefüllte Tags: {tags}")
+    else:
+        win.geometry("450x120")
+
+    tk.Button(win, text="Schließen", command=win.destroy,
+              bg=COLORS['primary'], fg="white", font=FONTS['button']).pack(pady=(0, 15))
 
 def bericht_erstellen():
     """Hauptfunktion: Bericht erstellen"""
@@ -392,9 +395,11 @@ def bericht_erstellen():
             initialfile=default_name
         )
         
-        if save_path and ersetze_content_controls(bericht_datei, werte_dict, save_path):
-            messagebox.showinfo("Erfolg", f"Bericht gespeichert:\n{save_path}")
-            logging.info(f"Bericht erstellt: {save_path}")
+        if save_path:
+            success, fehlende_tags = ersetze_content_controls(bericht_datei, werte_dict, save_path)
+            if success:
+                zeige_ergebnis_fenster(save_path, fehlende_tags)
+                logging.info(f"Bericht erstellt: {save_path}")
             
     except Exception as e:
         messagebox.showerror("Fehler", str(e))

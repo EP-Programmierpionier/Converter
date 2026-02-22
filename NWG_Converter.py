@@ -304,14 +304,15 @@ def ersetze_content_controls(doc_path, werte, output_path):
                         continue
 
                     # Prüfen ob Wert fehlt oder leer ist
-                    if key not in werte or not str(werte[key]).strip():
+                    is_missing = key not in werte or not str(werte[key]).strip()
+                    if is_missing:
                         fehlende_tags.append(key)
                     
                     content = sdt.find('.//w:sdtContent', namespaces=WORD_NS)
                     if content is not None:
                         texts = content.findall('.//w:t', namespaces=WORD_NS)
                         if texts:
-                            texts[0].text = str(werte.get(key, ""))
+                            texts[0].text = "[FEHLT]" if is_missing else str(werte[key])
                             for text_node in texts[1:]:
                                 text_node.text = ""
         

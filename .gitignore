@@ -21,6 +21,9 @@ Release/
 # Runtime
 Logs/
 
+# Vorlagen
+Vorlagen/
+
 # IDE / OS
 .vscode/
 .idea/

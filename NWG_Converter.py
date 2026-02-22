@@ -363,7 +363,7 @@ def zeige_ergebnis_fenster(save_path, fehlende_tags):
         win.geometry("450x420")
         logging.warning(f"Nicht gefüllte Tags: {tags}")
     else:
-        win.geometry("450x120")
+        win.geometry("450x150")
 
     tk.Button(win, text="Schließen", command=win.destroy,
               bg=COLORS['primary'], fg="white", font=FONTS['button']).pack(pady=(0, 15))
@@ -380,7 +380,8 @@ def bericht_erstellen():
         if 'Tags' not in df.columns or 'Werte' not in df.columns:
             raise ValueError("Excel muss 'Tags' und 'Werte' Spalten haben")
         
-        # Daten zusammenführen
+        # Daten zusammenführen (zuerst leeren, damit keine alten Werte bleiben)
+        werte_dict.clear()
         werte_dict.update(dict(zip(df['Tags'], df['Werte'])))
         
         # Speicherpfad

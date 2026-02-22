@@ -67,10 +67,15 @@ logs_dir = os.path.join(BASE_DIR, "Logs")
 os.makedirs(logs_dir, exist_ok=True)
 log_file = os.path.join(logs_dir, f"converter_{getpass.getuser()}.log")
 
+# Beim Start: bestehende Datei → .log.1 (jede Session bekommt eigene Datei)
+_log_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=20*1024, backupCount=3)
+if os.path.exists(log_file):
+    _log_handler.doRollover()
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s: %(message)s",
-    handlers=[logging.handlers.RotatingFileHandler(log_file, maxBytes=2*1024*1024, backupCount=0)]
+    handlers=[_log_handler]
 )
 
 # ========== GUI Konstanten ==========
@@ -273,6 +278,10 @@ def zeige_fehlende_tags(fehlende_tags):
     fehlende_window.title("Nicht gefüllte Platzhalter im Bericht")
     fehlende_window.geometry("450x350")
     fehlende_window.configure(bg=COLORS['background'])
+    fehlende_window.attributes('-topmost', True)
+    fehlende_window.lift()
+    fehlende_window.focus_force()
+    fehlende_window.grab_set()  # Modal: blockiert das Hauptfenster bis geschlossen
     
     tk.Label(fehlende_window, text="Nicht gefüllte Platzhalter im Bericht",
              bg=COLORS['background'], font=("Arial", 14, "bold")).pack(pady=(10,5))

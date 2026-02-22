@@ -1,0 +1,110 @@
+═══════════════════════════════════════════════════════════════════════════════
+👨‍💻 NWG-BERICHT CONVERTER - ENTWICKLER-INFORMATION
+═══════════════════════════════════════════════════════════════════════════════
+
+🛠️ ENTWICKLUNGSUMGEBUNG EINRICHTEN:
+───────────────────────────────────────────────────────────────────────────────
+
+1️⃣ SCHNELLSTART FÜR ENTWICKLUNG
+   → Doppelklick auf "start_dev.bat" (Windows Batch)
+   → ODER "start_dev.ps1" (PowerShell)
+   → Automatische Installation aller Python-Pakete
+   → Anwendung startet direkt
+
+2️⃣ MANUELLE EINRICHTUNG
+   → Python 3.11+ erforderlich
+   → pip install -r requirements.txt
+   → python NWG_Converter.py
+
+📁 ORDNER-STRUKTUR:
+───────────────────────────────────────────────────────────────────────────────
+
+Entwicklung/
+├── 🐍 NWG_Converter.py              # Hauptquellcode
+├── 🔧 build_app.py                  # Build-System für .exe
+├── ⚡ start_dev.bat/.ps1            # Entwicklung starten
+├── 🏗️ build.bat                     # .exe erstellen (Starter)
+├── 📋 requirements.txt              # Python-Abhängigkeiten
+├── 📄 BUILD_ANLEITUNG.md            # Detaillierte Build-Infos
+└── 📂 Vorlagen/                     # Alle Ressourcen
+    ├── logo.jpg                     # App-Logo (120x120px)
+    ├── Converter_logo.ico           # App-Icon
+    ├── Energieberaterliste_T2.xlsx  # Berater-Datenbank
+    └── NWG-Bericht_Converter_Vorlage_V1.0.docx  # Standard Word-Vorlage
+
+🔧 NEUE .EXE ERSTELLEN:
+───────────────────────────────────────────────────────────────────────────────
+build.bat
+ODER: python build_app.py
+
+Das Build-System:
+• Installiert automatisch alle Dependencies
+• Testet Import-Fähigkeit aller Module
+• Erstellt standalone .exe mit PyInstaller
+• Integriert alle Ressourcen (Icons, Vorlagen)
+• Kopiert fertige .exe ins Hauptverzeichnis
+
+📋 PYTHON-ABHÄNGIGKEITEN:
+───────────────────────────────────────────────────────────────────────────────
+• tkinter (GUI Framework)
+• tkinterdnd2 (Drag & Drop)
+• pandas + openpyxl (Excel-Verarbeitung)
+• python-docx (Word Content Controls)
+• pillow (Bildverarbeitung)
+• pathlib (Moderne Pfad-Behandlung)
+
+🎯 WICHTIGE CODE-BEREICHE:
+───────────────────────────────────────────────────────────────────────────────
+
+1️⃣ PFAD-BEHANDLUNG (Zeile 25-40)
+   • Unterscheidet zwischen .exe und Python-Ausführung
+   • get_resource_path() für PyInstaller-Kompatibilität
+   • Automatische Vorlagen-Erkennung
+
+2️⃣ EXCEL-VERARBEITUNG (ab Zeile 240)
+   • validiere_excel_struktur() prüft erforderliche Spalten
+   • Sheet-Name: "Export NWG" erforderlich
+   • Spalten: "Tags" und "Werte" erforderlich
+
+3️⃣ WORD-VERARBEITUNG (ab Zeile 300)
+   • ersetze_content_controls() für Content Control Replacement
+   • Namespace: 'w:http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+   • Tag-basierte Ersetzung mit Fehlerprotokoll
+
+4️⃣ GUI-KOMPONENTEN (ab Zeile 500)
+   • CanvasButton für moderne runde Buttons
+   • TkinterDnD für Drag & Drop-Funktionalität
+   • Intelligente Fenster-Fokussierung
+
+🔄 PFAD-ANPASSUNGEN NACH ORDNER-ÄNDERUNG:
+───────────────────────────────────────────────────────────────────────────────
+Da die Vorlagen jetzt in "Entwicklung/Vorlagen/" liegen, sind die Pfade
+automatisch korrekt konfiguriert:
+
+Python-Ausführung: Path(__file__).parent / "Vorlagen"
+.exe-Ausführung: Ressourcen sind eingebettet via get_resource_path()
+
+📊 LOGGING & DEBUGGING:
+───────────────────────────────────────────────────────────────────────────────
+• Logs werden in "../Logs/" geschrieben
+• Console + File-Logging aktiviert
+• Debug-Pfad-Informationen beim Start
+• Umfangreiche Fehlerprotokollierung
+
+🚀 DEPLOYMENT:
+───────────────────────────────────────────────────────────────────────────────
+1. Code-Änderungen in NWG_Converter.py
+2. python build_app.py ausführen
+3. Fertige .exe wird automatisch ins Hauptverzeichnis kopiert
+4. Benutzer können sofort die neue Version verwenden
+
+⚠️ WICHTIGE HINWEISE:
+───────────────────────────────────────────────────────────────────────────────
+• Icon-Pfad: Entwicklung/Vorlagen/Converter_logo.ico
+• PyInstaller baut Ressourcen in .exe ein
+• Pfad-Logik unterscheidet sys.frozen (Hauptcode Zeile 25-40)
+• Content Controls in Word müssen w:tag Attribute haben
+
+═══════════════════════════════════════════════════════════════════════════════
+Für detaillierte Build-Informationen siehe BUILD_ANLEITUNG.md
+═══════════════════════════════════════════════════════════════════════════════

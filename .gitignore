@@ -12,6 +12,15 @@ venv/
 .coverage
 htmlcov/
 
+# Build outputs
+build/
+dist/
+Release/
+*.spec
+
+# Runtime
+Logs/
+
 # IDE / OS
 .vscode/
 .idea/

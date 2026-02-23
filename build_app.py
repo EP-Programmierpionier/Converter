@@ -6,9 +6,15 @@ Erstellt eine ausführbare .exe-Datei mit allen benötigten Ressourcen
 
 import os
 import sys
+import stat
 import shutil
 import subprocess
 from pathlib import Path
+
+def _remove_readonly(func, path, _):
+    """Fehlerbehandlung für shutil.rmtree: Lese-Schutz aufheben und erneut versuchen."""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 def install_dependencies():
     """Installiert alle benötigten Python-Pakete."""
@@ -98,7 +104,7 @@ def main():
     for folder in ["build", "dist", "__pycache__"]:
         folder_path = base_dir / folder
         if folder_path.exists():
-            shutil.rmtree(folder_path)
+            shutil.rmtree(folder_path, onerror=_remove_readonly)
             print(f"   🗑️  {folder} gelöscht")
     
     # .spec Dateien löschen
@@ -130,7 +136,7 @@ def main():
         "--windowed",                          # Kein Konsolen-Fenster
         "--name=NWG-Bericht-Converter",       # Name der .exe
         *icon_param,                           # Icon für die .exe (falls vorhanden)
-        "--add-data=Vorlagen/logo.png;.",   # Logo einbetten
+        "--add-data=Vorlagen/logo.jpg;.",   # Logo einbetten
         "--hidden-import=pandas",              # Pandas explizit einbinden
         "--hidden-import=openpyxl",            # openpyxl für Excel
         "--hidden-import=tkinterdnd2",         # Drag & Drop
@@ -141,6 +147,7 @@ def main():
         "--exclude-module=matplotlib",         # Unnötige Module ausschließen
         "--exclude-module=pandas",
         "--exclude-module=numpy",
+        str(base_dir / "NWG_Converter.py"),    # Hauptskript
     ]
 
     
@@ -195,7 +202,7 @@ def main():
     print("\n📦 Erstelle Release-Paket...")
     release_dir = base_dir / "Release"
     if release_dir.exists():
-        shutil.rmtree(release_dir)
+        shutil.rmtree(release_dir, onerror=_remove_readonly)
     
     release_dir.mkdir()
     

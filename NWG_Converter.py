@@ -21,7 +21,7 @@ import math
 import logging
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-import pandas as pd
+from openpyxl import load_workbook
 from docx import Document
 from docx.oxml.ns import qn
 from PIL import Image, ImageTk
@@ -96,7 +96,7 @@ FONTS = {
 
 # ========== Globale Variablen ==========
 excel_datei = None
-berater_df = pd.DataFrame()
+berater_df = []
 werte_dict = {}
 WORD_NS = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
 
@@ -144,14 +144,21 @@ def lade_beraterliste():
     global berater_df
     try:
         if os.path.exists(BERATER_LISTE):
-            berater_df = pd.read_excel(BERATER_LISTE, dtype=str).fillna("")
+            wb = load_workbook(BERATER_LISTE, read_only=True, data_only=True)
+            ws = wb.active
+            headers = [str(c.value) if c.value is not None else "" for c in next(ws.iter_rows(min_row=1, max_row=1))]
+            berater_df = []
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                entry = {headers[i]: (str(v) if v is not None else "") for i, v in enumerate(row)}
+                berater_df.append(entry)
+            wb.close()
             logging.info(f"Beraterliste geladen: {len(berater_df)} Einträge")
         else:
             logging.warning("Beraterliste nicht gefunden")
-            berater_df = pd.DataFrame(columns=["Berater_Name", "Berater_Beraternummer"])
+            berater_df = []
     except Exception as e:
         logging.error(f"Fehler beim Laden der Beraterliste: {e}")
-        berater_df = pd.DataFrame(columns=["Berater_Name", "Berater_Beraternummer"])
+        berater_df = []
 
 def lade_vorlagen_liste():
     """Gibt alle .docx Dateien aus dem Vorlagen-Ordner zurück"""
@@ -162,16 +169,16 @@ def lade_vorlagen_liste():
 def on_berater_auswahl(event):
     """Event-Handler für Berater-Auswahl"""
     name = cb_berater.get()
-    if name and not berater_df.empty:
-        row = berater_df[berater_df['Berater_Name'] == name]
-        if not row.empty:
+    if name and berater_df:
+        row = next((r for r in berater_df if r.get('Berater_Name') == name), None)
+        if row:
             # Aktualisiere globales Dictionary
             werte_dict.update({
-                'Berater_Name': row['Berater_Name'].iloc[0],
-                'Berater_Beraternummer': row['Berater_Beraternummer'].iloc[0],
-                'Berater_Titel': row.get('Berater_Titel', '').iloc[0] or "N/A",
-                'Berater_E-Mail': row.get('Berater_E-Mail', '').iloc[0],
-                'Berater_Telefonnummer': row.get('Berater_Telefonnummer', '').iloc[0]
+                'Berater_Name': row.get('Berater_Name', ''),
+                'Berater_Beraternummer': row.get('Berater_Beraternummer', ''),
+                'Berater_Titel': row.get('Berater_Titel', '') or "N/A",
+                'Berater_E-Mail': row.get('Berater_E-Mail', ''),
+                'Berater_Telefonnummer': row.get('Berater_Telefonnummer', '')
             })
             
             # GUI-Felder aktualisieren
@@ -376,13 +383,26 @@ def bericht_erstellen():
     
     try:
         # Excel laden
-        df = pd.read_excel(excel_datei, sheet_name='Export NWG', dtype=str).fillna("")
-        if 'Tags' not in df.columns or 'Werte' not in df.columns:
+        wb = load_workbook(excel_datei, read_only=True, data_only=True)
+        if 'Export NWG' not in wb.sheetnames:
+            raise ValueError("Excel muss ein Sheet 'Export NWG' haben")
+        ws = wb['Export NWG']
+        rows = list(ws.iter_rows(min_row=1, values_only=True))
+        wb.close()
+
+        headers = [str(c) if c is not None else "" for c in rows[0]]
+        if 'Tags' not in headers or 'Werte' not in headers:
             raise ValueError("Excel muss 'Tags' und 'Werte' Spalten haben")
-        
+        tag_idx = headers.index('Tags')
+        val_idx = headers.index('Werte')
+
         # Daten zusammenführen (zuerst leeren, damit keine alten Werte bleiben)
         werte_dict.clear()
-        werte_dict.update(dict(zip(df['Tags'], df['Werte'])))
+        for row in rows[1:]:
+            tag = str(row[tag_idx]) if row[tag_idx] is not None else ""
+            val = str(row[val_idx]) if row[val_idx] is not None else ""
+            if tag:
+                werte_dict[tag] = val
         
         # Speicherpfad
         adresse = werte_dict.get('Gebäude_Adresse', '')
@@ -460,7 +480,7 @@ frm_left.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
 frm_left.columnconfigure(1, weight=1)
 
 tk.Label(frm_left, text="Auswahl:", bg=COLORS['background'], font=FONTS['label']).grid(row=0, column=0, sticky='w')
-cb_berater = ttk.Combobox(frm_left, values=list(berater_df['Berater_Name']), state='readonly', width=25)
+cb_berater = ttk.Combobox(frm_left, values=[r['Berater_Name'] for r in berater_df], state='readonly', width=25)
 cb_berater.grid(row=0, column=1, padx=(10,0), pady=5, sticky="ew")
 cb_berater.bind('<<ComboboxSelected>>', on_berater_auswahl)
 

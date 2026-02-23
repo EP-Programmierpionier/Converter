@@ -13,8 +13,6 @@ from pathlib import Path
 def install_dependencies():
     """Installiert alle benötigten Python-Pakete."""
     packages = [
-        "pandas>=1.5.0",
-        "numpy>=1.21.0",
         "python-docx>=0.8.11", 
         "Pillow>=9.0.0",
         "tkinterdnd2>=0.3.0",
@@ -41,7 +39,7 @@ def install_dependencies():
 def test_imports():
     """Testet ob alle Module importiert werden können."""
     print("\n🧪 Teste Module-Imports...")
-    modules = ["pandas", "numpy", "docx", "PIL", "tkinterdnd2", "openpyxl"]
+    modules = ["docx", "PIL", "tkinterdnd2", "openpyxl"]
     
     for module in modules:
         try:
@@ -142,7 +140,8 @@ def main():
         "--clean",                             # Cache bereinigen
         "--noconfirm",                         # Keine Bestätigung
         "--exclude-module=matplotlib",         # Unnötige Module ausschließen
-        "NWG_Converter.py"                     # Hauptdatei
+        "--exclude-module=pandas",
+        "--exclude-module=numpy",
     ]
 
     

@@ -80,7 +80,7 @@ def main():
     # 3. Überprüfen ob alle benötigten Dateien vorhanden sind
     required_files = [
         "NWG_Converter.py",
-        "Vorlagen/logo.jpg", 
+        "Vorlagen/logo.png", 
         "Vorlagen/Energieberaterliste_T2.xlsx",
         "Vorlagen/NWG-Bericht_Converter_Vorlage_V1.0.docx",
         "Vorlagen/Converter_logo.ico"
@@ -136,7 +136,7 @@ def main():
         "--windowed",                          # Kein Konsolen-Fenster
         "--name=NWG-Bericht-Converter",       # Name der .exe
         *icon_param,                           # Icon für die .exe (falls vorhanden)
-        "--add-data=Vorlagen/logo.jpg;.",   # Logo einbetten
+        "--add-data=Vorlagen/logo.png;.",   # Logo einbetten
         "--hidden-import=pandas",              # Pandas explizit einbinden
         "--hidden-import=openpyxl",            # openpyxl für Excel
         "--hidden-import=tkinterdnd2",         # Drag & Drop

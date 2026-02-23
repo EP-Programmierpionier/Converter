@@ -417,6 +417,7 @@ def bericht_erstellen():
             if success:
                 zeige_ergebnis_fenster(save_path, fehlende_tags)
                 logging.info(f"Bericht erstellt: {save_path}")
+                os.startfile(save_path)
             
     except Exception as e:
         messagebox.showerror("Fehler", str(e))

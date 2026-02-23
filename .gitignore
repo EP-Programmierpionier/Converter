@@ -22,7 +22,8 @@ Release/
 Logs/
 
 # Vorlagen
-Vorlagen/
+Vorlagen/*.xlsx
+Vorlagen/*.docx
 
 # IDE / OS
 .vscode/

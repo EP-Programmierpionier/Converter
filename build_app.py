@@ -14,7 +14,6 @@ def install_dependencies():
     """Installiert alle benötigten Python-Pakete."""
     packages = [
         "python-docx>=0.8.11", 
-        "Pillow>=9.0.0",
         "tkinterdnd2>=0.3.0",
         "openpyxl>=3.0.0",
         "pyinstaller>=5.0.0"
@@ -39,7 +38,7 @@ def install_dependencies():
 def test_imports():
     """Testet ob alle Module importiert werden können."""
     print("\n🧪 Teste Module-Imports...")
-    modules = ["docx", "PIL", "tkinterdnd2", "openpyxl"]
+    modules = ["docx", "tkinterdnd2", "openpyxl"]
     
     for module in modules:
         try:
@@ -131,7 +130,7 @@ def main():
         "--windowed",                          # Kein Konsolen-Fenster
         "--name=NWG-Bericht-Converter",       # Name der .exe
         *icon_param,                           # Icon für die .exe (falls vorhanden)
-        "--add-data=Vorlagen/logo.jpg;.",   # Logo einbetten
+        "--add-data=Vorlagen/logo.png;.",   # Logo einbetten
         "--hidden-import=pandas",              # Pandas explizit einbinden
         "--hidden-import=openpyxl",            # openpyxl für Excel
         "--hidden-import=tkinterdnd2",         # Drag & Drop

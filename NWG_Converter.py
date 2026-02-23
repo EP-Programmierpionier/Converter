@@ -24,7 +24,6 @@ from tkinter import filedialog, messagebox, ttk
 from openpyxl import load_workbook
 from docx import Document
 from docx.oxml.ns import qn
-from PIL import Image, ImageTk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 import sys
 import getpass
@@ -59,7 +58,7 @@ def get_resource_path(relative_path):
 # Pfade automatisch bestimmen
 BASE_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else str(Path(__file__).parent.parent)
 BERATER_LISTE = str(VORLAGEN_PATH / "Energieberaterliste_T2.xlsx")
-LOGO_PATH = get_resource_path("logo.jpg")
+LOGO_PATH = get_resource_path("logo.png")
 ICON_PATH = get_resource_path("Converter_logo.ico")
 
 # Logging-Setup
@@ -499,8 +498,7 @@ frm_center.grid(row=0, column=1, sticky='nsew', padx=10, pady=10)
 # Logo mit Easter Egg
 if os.path.exists(LOGO_PATH):
     try:
-        img = Image.open(LOGO_PATH).resize((120, 120), Image.Resampling.LANCZOS)
-        logo_img = ImageTk.PhotoImage(img)
+        logo_img = tk.PhotoImage(file=LOGO_PATH)
         logo_label = tk.Label(frm_center, image=logo_img, bg=COLORS['background'])
         logo_label.pack(pady=(50,20))
         logo_label.bind("<Double-Button-1>", show_easter_egg)  # Easter Egg!

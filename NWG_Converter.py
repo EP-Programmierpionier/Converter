@@ -66,10 +66,7 @@ logs_dir = os.path.join(BASE_DIR, "Logs")
 os.makedirs(logs_dir, exist_ok=True)
 log_file = os.path.join(logs_dir, f"converter_{getpass.getuser()}.log")
 
-# Beim Start: bestehende Datei → .log.1 (jede Session bekommt eigene Datei)
 _log_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=20*1024, backupCount=3)
-if os.path.exists(log_file):
-    _log_handler.doRollover()
 
 logging.basicConfig(
     level=logging.INFO,

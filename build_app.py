@@ -248,7 +248,7 @@ Version 1.0 - Build """ + str(Path().cwd().name) + """
     print("\n🧹 Aufräumen...")
     build_dir = base_dir / "build"
     if build_dir.exists():
-        shutil.rmtree(build_dir)
+        shutil.rmtree(build_dir, onerror=_remove_readonly)
         print("   🗑️  build/ gelöscht")
     
     for spec_file in base_dir.glob("*.spec"):

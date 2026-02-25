@@ -93,7 +93,7 @@ FONTS = {
 # ========== Globale Variablen ==========
 excel_datei = None
 berater_df = []
-werte_dict = {}
+berater_dict = {}
 WORD_NS = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
 
 # ========== Moderne Buttons ==========
@@ -169,7 +169,7 @@ def on_berater_auswahl(event):
         row = next((r for r in berater_df if r.get('Berater_Name') == name), None)
         if row:
             # Aktualisiere globales Dictionary
-            werte_dict.update({
+            berater_dict.update({
                 'Berater_Name': row.get('Berater_Name', ''),
                 'Berater_Beraternummer': row.get('Berater_Beraternummer', ''),
                 'Berater_Titel': row.get('Berater_Titel', '') or "N/A",
@@ -181,9 +181,9 @@ def on_berater_auswahl(event):
             entry_name.config(state='normal')
             entry_nr.config(state='normal')
             entry_name.delete(0, tk.END)
-            entry_name.insert(0, werte_dict['Berater_Name'])
+            entry_name.insert(0, berater_dict['Berater_Name'])
             entry_nr.delete(0, tk.END)
-            entry_nr.insert(0, werte_dict['Berater_Beraternummer'])
+            entry_nr.insert(0, berater_dict['Berater_Beraternummer'])
             entry_name.config(state='readonly')
             entry_nr.config(state='readonly')
 
@@ -392,16 +392,19 @@ def bericht_erstellen():
         tag_idx = headers.index('Tags')
         val_idx = headers.index('Werte')
 
-        # Daten zusammenführen (zuerst leeren, damit keine alten Werte bleiben)
-        werte_dict.clear()
+        # Excel-Daten in lokales Dict laden
+        excel_werte = {}
         for row in rows[1:]:
             tag = str(row[tag_idx]) if row[tag_idx] is not None else ""
             val = str(row[val_idx]) if row[val_idx] is not None else ""
             if tag:
-                werte_dict[tag] = val
-        
+                excel_werte[tag] = val
+
+        # Berater-Daten (berater_dict) + Excel-Daten zusammenführen; Excel hat Vorrang
+        alle_werte = {**berater_dict, **excel_werte}
+
         # Speicherpfad
-        adresse = werte_dict.get('Gebäude_Adresse', '')
+        adresse = alle_werte.get('Gebäude_Adresse', '')
         adresse_clean = "".join(c if c not in r'\/:*?"<>|' else "_" for c in adresse).strip()
         default_name = f"Sanierungsfahrplan_{adresse_clean}" if adresse_clean else "Sanierungsfahrplan"
 
@@ -413,7 +416,7 @@ def bericht_erstellen():
         )
         
         if save_path:
-            success, fehlende_tags = ersetze_content_controls(bericht_datei, werte_dict, save_path)
+            success, fehlende_tags = ersetze_content_controls(bericht_datei, alle_werte, save_path)
             if success:
                 zeige_ergebnis_fenster(save_path, fehlende_tags)
                 logging.info(f"Bericht erstellt: {save_path}")
